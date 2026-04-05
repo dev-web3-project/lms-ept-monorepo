@@ -1,0 +1,20 @@
+# ============================================================
+# CONFIG — course-service (Modules, Quiz, Forum, Materials)
+# ============================================================
+
+server:
+  port: 8083
+
+spring:
+  datasource:
+    url: ${COURSE_DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  jpa:
+    show-sql: false
+    open-in-view: false

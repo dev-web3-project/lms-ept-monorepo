@@ -1,0 +1,43 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database dumps and sensitive archives
+*.sql
+*.zip
+*.dump
+*.tar.gz
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build & Dependency folders
+**/target/
+**/node_modules/
+**/build/
+**/dist/
+.gradle/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Logs & PIDs
+*.log
+.local-logs/
+.local-pids/
+
+# Uploads
+uploads/
+**/uploads/*
+!**/uploads/.gitkeep
+
+# Project Context (AI & Dev notes)
+PROJECT_CONTEXT.md
+ADAPTIVE_LEARNING_PLAN.md
+IMPROVEMENTS.md

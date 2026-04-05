@@ -1,0 +1,121 @@
+# ============================================================
+# CONFIG — api-gateway (Routing, CORS, Sécurité JWT)
+# ============================================================
+
+server:
+  port: 8080
+
+spring:
+  codec:
+    max-in-memory-size: 50MB
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "${FRONTEND_URL:http://localhost:3000}"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
+
+      default-filters:
+        - AuthenticationFilter
+
+      routes:
+        - id: user-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/user/**
+
+        - id: university-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/uni/**
+
+        - id: university-service-public
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/public/uni/**
+            - Method=GET
+
+        - id: course-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/course/**
+
+        - id: course-service-student
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/studentcourse/**
+
+        - id: course-service-public
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/public/courses/**
+            - Method=GET
+
+        - id: announcement-service
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/announcement/**
+
+        - id: ai-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/ai/**
+
+        # OpenAPI aggregation
+        - id: user-service-api-docs
+          uri: http://localhost:8081
+          predicates:
+            - Path=/user-service/v3/api-docs/**
+          filters:
+            - StripPrefix=1
+
+        - id: course-service-api-docs
+          uri: http://localhost:8083
+          predicates:
+            - Path=/course-service/v3/api-docs/**
+          filters:
+            - StripPrefix=1
+
+        - id: university-service-api-docs
+          uri: http://localhost:8082
+          predicates:
+            - Path=/university-service/v3/api-docs/**
+          filters:
+            - StripPrefix=1
+
+        - id: announcement-service-api-docs
+          uri: http://localhost:8086
+          predicates:
+            - Path=/announcement-service/v3/api-docs/**
+          filters:
+            - StripPrefix=1
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    config-url: /v3/api-docs/swagger-config
+    urls:
+      - name: "👤 User Service"
+        url: /user-service/v3/api-docs
+        display-name: "👤 User Service"
+      - name: "📚 Course Service"
+        url: /course-service/v3/api-docs
+        display-name: "📚 Course Service"
+      - name: "🏫 University Service"
+        url: /university-service/v3/api-docs
+        display-name: "🏫 University Service"
+      - name: "📢 Announcement Service"
+        url: /announcement-service/v3/api-docs
+        display-name: "📢 Announcement Service"
+    disable-swagger-default-url: true
+    urls-primary-name: "👤 User Service"
+  api-docs:
+    enabled: true
