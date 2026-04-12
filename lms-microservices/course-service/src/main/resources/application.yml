@@ -1,0 +1,23 @@
+# course-service — Configuration minimale locale
+# Config centralisée dans config-repo/course-service.yml
+# Valeurs sensibles dans lms-microservices/.env
+
+spring:
+  application:
+    name: course-service
+  config:
+    import: "optional:configserver:http://localhost:8888"
+
+# --- Fallback minimal ---
+server:
+  port: 8083
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+
+spring.datasource:
+  url: ${DB_URL}
+  username: ${DB_USERNAME}
+  password: ${DB_PASSWORD}
