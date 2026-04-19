@@ -1,0 +1,22 @@
+# Environment files
+.env
+
+# Build artifacts
+target/
+build/
+.gradle/
+
+# Logs and runtime data
+.local-logs/
+.local-pids/
+*.log
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Shared Uploads (ignored here as well for safety)
+uploads/
+**/uploads/*
+!**/uploads/.gitkeep

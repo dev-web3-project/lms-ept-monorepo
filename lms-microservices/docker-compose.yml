@@ -1,0 +1,202 @@
+services:
+  postgres_db:
+    container_name: postgres_db
+    image: pgvector/pgvector:16-pg16
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-macbookpro}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-lmsdb}
+    volumes:
+      - ./postgres-init/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - lms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-macbookpro} -d ${POSTGRES_DB:-lmsdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin4:
+    container_name: pgadmin4
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@lms.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    networks:
+      - lms-network
+
+  discovery-server:
+    build:
+      context: ./discovery-server
+    container_name: discovery-server
+    ports:
+      - 8761:8761
+    networks:
+      - lms-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8761/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  config-server:
+    build:
+      context: ./config-server
+    container_name: config-server
+    ports:
+      - 8888:8888
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_PROFILES_ACTIVE=native
+    volumes:
+      - ./config-repo:/app/config-repo
+    networks:
+      - lms-network
+    restart: always
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8888/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - 8080:8080
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+    networks:
+      - lms-network
+    restart: always
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  user-service:
+    build:
+      context: ./user-service
+    container_name: user-service
+    ports:
+      - 8081:8081
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - USER_DB_URL=jdbc:postgresql://postgres_db:5432/user_db
+      - DB_USERNAME=${DB_USERNAME:-macbookpro}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - lms-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres_db:
+        condition: service_healthy
+    restart: always
+
+  university-service:
+    build:
+      context: ./university-service
+    container_name: university-service
+    ports:
+      - 8082:8082
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - UNIVERSITY_DB_URL=jdbc:postgresql://postgres_db:5432/university_db
+      - DB_USERNAME=${DB_USERNAME:-macbookpro}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+    networks:
+      - lms-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+    restart: always
+
+  course-service:
+    build:
+      context: ./course-service
+    container_name: course-service
+    ports:
+      - 8083:8083
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - COURSE_DB_URL=jdbc:postgresql://postgres_db:5432/course_db
+      - DB_USERNAME=${DB_USERNAME:-macbookpro}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - lms-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+    restart: always
+
+  announcement-service:
+    build:
+      context: ./announcement-service
+    container_name: announcement-service
+    ports:
+      - 8086:8086
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - ANNOUNCEMENT_DB_URL=jdbc:postgresql://postgres_db:5432/announcement_db
+      - DB_USERNAME=${DB_USERNAME:-macbookpro}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+    networks:
+      - lms-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+    restart: always
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: ai-service
+    ports:
+      - 8085:8085
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-server:8761/eureka/
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - AI_DB_URL=jdbc:postgresql://postgres_db:5432/ai_db
+      - DB_USERNAME=${DB_USERNAME:-macbookpro}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - lms-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+      postgres_db:
+        condition: service_healthy
+    restart: always
+
+networks:
+  lms-network:
+    driver: bridge
